@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>消消乐游戏</title>
+    <style>
+        /* 游戏网格样式 */
+      .game-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 50px);
+            grid-template-rows: repeat(8, 50px);
+            gap: 5px;
+        }
+
+        /* 每个格子的样式 */
+      .cell {
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>消消乐游戏</h1>
+    <div class="game-grid" id="gameGrid"></div>
+    <p id="score">得分: 0</p>
+
+    <script>
+        // 游戏网格大小
+        const gridSize = 8;
+        // 存储游戏网格数据的二维数组
+        let gameGridData = [];
+        // 用于存储可消除的格子
+        let toBeRemoved = [];
+        // 得分
+        let score = 0;
+
+        // 生成随机图案
+        function generateRandomPattern() {
+            const patterns = ['🍎', '🍌', '🍇', '🍓', '🥝', '🍒', '🍍', '🥭'];
+            return patterns[Math.floor(Math.random() * patterns.length)];
+        }
+
+        // 初始化游戏网格
+        function initGameGrid() {
+            const gameGrid = document.getElementById('gameGrid');
+            for (let i = 0; i < gridSize; i++) {
+                gameGridData[i] = [];
+                for (let j = 0; j < gridSize; j++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    const pattern = generateRandomPattern();
+                    cell.textContent = pattern;
+                    gameGrid.appendChild(cell);
+                    gameGridData[i][j] = pattern;
+                    cell.addEventListener('click', function () {
+                        checkMatches(cell, i, j);
+                    });
+                }
+            }
+        }
+
+        // 检查点击格子周围及自身的匹配情况
+        function checkMatches(cell, row, col) {
+            const pattern = gameGridData[row][col];
+            toBeRemoved = [];
+
+            // 检查横向匹配
+            for (let j = col; j >= 0 && gameGridData[row][j] === pattern; j--) {
+                toBeRemoved.push({ row: row, col: j });
+            }
+            for (let j = col + 1; j < gridSize && gameGridData[row][j] === pattern; j++) {
+                toBeRemoved.push({ row: row, col: j });
+            }
+
+            // 检查纵向匹配
+            for (let i = row; i >= 0 && gameGridData[i][col] === pattern; i--) {
+                toBeRemoved.push({ row: i, col: col });
+            }
+            for (let i = row + 1; i < gridSize && gameGridData[i][col] === pattern; i++) {
+                toBeRemoved.push({ row: i, col: col });
+            }
+
+            // 如果有三个或更多相同图案可消除
+            if (toBeRemoved.length >= 3) {
+                removeMatches();
+            }
+        }
+
+        // 消除匹配的格子
+        function removeMatches() {
+            toBeRemoved.forEach(function (cellData) {
+                const cell = document.querySelectorAll('.cell')[cellData.row * gridSize + cellData.col];
+                cell.textContent = '';
+                gameGridData[cellData.row][cellData.col] = null;
+            });
+            score += toBeRemoved.length;
+            updateScore();
+            dropCells();
+            fillTop();
+        }
+
+        // 更新得分显示
+        function updateScore() {
+            const scoreElement = document.getElementById('score');
+            scoreElement.textContent = '得分: ' + score;
+        }
+
+        // 让上方的格子下落填充空白
+        function dropCells() {
+            for (let col = 0; col < gridSize; col++) {
+                let emptyRow = -1;
+                for (let row = 0; row < gridSize; row++) {
+                    if (gameGridData[row][col] === null) {
+                        if (emptyRow === -1) {
+                            emptyRow = row;
+                        }
+                    } else if (emptyRow!== -1) {
+                        gameGridData[emptyRow][col] = gameGridData[row][col];
+                        gameGridData[row][col] = null;
+                        const cellToMove = document.querySelectorAll('.cell')[row * gridSize + col];
+                        const cellToDrop = document.querySelectorAll('.cell')[emptyRow * gridSize + col];
+                        cellToMove.textContent = '';
+                        cellToDrop.textContent = gameGridData[emptyRow][col];
+                        emptyRow++;
+                    }
+                }
+            }
+        }
+
+        // 在顶部生成新的图案填充空白
+        function fillTop() {
+            for (let col = 0; col < gridSize; col++) {
+                for (let row = gridSize - 1; row >= 0 && gameGridData[row][col] === null; row--) {
+                    const cell = document.querySelectorAll('.cell')[row * gridSize + col];
+                    const pattern = generateRandomPattern();
+                    cell.textContent = pattern;
+                    gameGridData[row][col] = pattern;
+                }
+            }
+            checkNoMatches();
+        }
+
+        // 检查是否没有可消除的图案，若没有则游戏结束或根据需求处理
+        function checkNoMatches() {
+            let noMatches = true;
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const cell = document.querySelectorAll('.cell')[i * gridSize + j];
+                    const pattern = gameGridData[i][j];
+                    toBeRemoved = [];
+
+                    // 再次检查点击格子周围及自身的匹配情况（类似checkMatches逻辑）
+                    // 检查横向匹配
+                    for (let j2 = j; j2 >= 0 && gameGridData[i][j2] === pattern; j2--) {
+                        toBeRemoved.push({ row: i, col: j2 });
+                    }
+                    for (let j2 = j + 1; j2 < gridSize && gameGridData[i][j2] === pattern; j2++) {
+                        toBeRemoved.push({ row: i, col: j2 });
+                    }
+
+                    // 检查纵向匹配
+                    for (let i2 = i; i2 >= 0 && gameGridData[i2][j] === pattern; i2--) {
+                        toBeRemoved.push({ row: i2, col: j });
+                    }
+                    for (let i2 = i + 1; i2 < gridSize && gameGridData[i2][j] === pattern; i2++) {
+                        toBeRemoved.push({ row: i2, col: j });
+                    }
+
+                    if (toBeRemoved.length >= 3) {
+                        noMatches = false;
+                        break;
+                    }
+                }
+                if (!noMatches) {
+                    break;
+                }
+            }
+            if (noMatches) {
+                alert('游戏结束，您的得分是：' + score);
+            }
+        }
+
+        initGameGrid();
+    </script>
+</body>
+
+</html>
